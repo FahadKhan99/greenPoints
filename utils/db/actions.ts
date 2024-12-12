@@ -4,6 +4,14 @@ import { eq, and, desc, sql } from "drizzle-orm";
 
 export const createUser = async (email: string, name: string) => {
   try {
+    const [existingUser] = await db
+      .select()
+      .from(Users)
+      .where(eq(Users.email, email))
+      .execute();
+
+    if (existingUser) return existingUser;
+
     const [user] = await db
       .insert(Users)
       .values({ email, name })
@@ -39,7 +47,7 @@ export const getUnreadNotification = async (userId: number) => {
         and(eq(Notifications.isRead, false), eq(Notifications.userId, userId))
       )
       .execute();
-    return notification;
+    return notification || [];
   } catch (error) {
     console.error("Error in getUnreadNotification", error);
     return null;
@@ -81,15 +89,30 @@ export const getRewardTransaction = async (userId: number) => {
       .orderBy(desc(Transactions.date))
       .limit(10)
       .execute();
-    
+
     const formattedTransaction = transcations.map((transaction) => ({
       ...transaction,
-      date: transaction.date.toISOString().split("T")[0]
-    }))
-    
+      date: transaction.date.toISOString().split("T")[0],
+    }));
+
     return formattedTransaction;
   } catch (error) {
     console.error("Error in getRewardTransaction", error);
+    return null;
+  }
+};
+
+export const markNotificationAsRead = async (notificationId: number) => {
+  try {
+    await db
+      .update(Notifications)
+      .set({
+        isRead: true,
+      })
+      .where(eq(Notifications.id, notificationId))
+      .execute();
+  } catch (error) {
+    console.error("Error in markNotificationAsRead", error);
     return null;
   }
 };
