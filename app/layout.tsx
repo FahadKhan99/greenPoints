@@ -5,9 +5,10 @@ import { useState, useEffect } from "react";
 
 import "./globals.css";
 
-import { toast, Toaster } from "react-hot-toast";
+import { ErrorIcon, toast, Toaster } from "react-hot-toast";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
+import { getAvailableRewards, getUserByEmail } from "@/utils/db/actions";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,20 +18,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [totalEarning, setTotalEarning] = useState(0);
-
-  // useEffect(() => {
-
-  // })
 
   return (
     <html lang="en">
       <body className={inter.className}>
         <div className="min-h-screen bg-gray-50 flex flex-col">
-          <Header
-            onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-            totalEarning={totalEarning}
-          />
+          <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
 
           {/* main content (sidebar on the left and content on right) */}
           <div className="flex flex-1">

@@ -26,14 +26,14 @@ export const Reports = pgTable("reports", {
     .notNull(), // this is how we make relations
   location: text("location").notNull(),
   wasteType: varchar("waste_type", { length: 255 }).notNull(),
-  amount: integer("amount").notNull(),
+  amount: text("amount").notNull(),
   imageUrl: text("image_url").notNull(),
   verificationResult: jsonb("verification_result"),
   status: varchar("status", { length: 255 }).notNull().default("pending"),
   collectorId: integer("collector_id").references(() => Users.id),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // user gets points based on whether its waste reported or collected

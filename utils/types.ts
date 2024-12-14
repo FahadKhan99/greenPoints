@@ -1,5 +1,5 @@
 export type Users = {
-  id?: number;
+  id: number;
   name: string;
   email: string;
 
@@ -8,11 +8,11 @@ export type Users = {
 };
 
 export type Reports = {
-  id?: number;
+  id: number;
   userId: number;
   location: string;
   wasteType: string;
-  amount: number;
+  amount: string;
   imageUrl?: string;
   verificationResult?: string | null | unknown;
   status: string;
@@ -23,7 +23,7 @@ export type Reports = {
 };
 
 export type Rewards = {
-  id?: number;
+  id: number;
   userId: number;
   points: number;
   isAvailable: boolean;
@@ -36,7 +36,7 @@ export type Rewards = {
 };
 
 export type CollectedWastes = {
-  id?: number;
+  id: number;
   reportId: number;
   collectorId: number;
   collectionDate: Date;
@@ -44,7 +44,7 @@ export type CollectedWastes = {
 };
 
 export type Notifications = {
-  id?: number;
+  id: number;
   userId: number;
   message: string;
   type: string;
@@ -55,7 +55,7 @@ export type Notifications = {
 };
 
 export type Transactions = {
-  id?: number;
+  id: number;
   userId: number;
   type: string;
   amount: number;

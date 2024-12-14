@@ -2,6 +2,7 @@ import { Crete_Round } from "next/font/google";
 import { db } from "./dbConfig";
 import { Users, Notifications, Transactions, Reports, Rewards } from "./schema";
 import { eq, and, desc, sql } from "drizzle-orm";
+import { use } from "react";
 
 export const createUser = async (email: string, name: string) => {
   try {
@@ -41,7 +42,7 @@ export const getUserByEmail = async (email: string) => {
 
 export const getUnreadNotification = async (userId: number) => {
   try {
-    const [notification] = await db
+    const notification = await db
       .select()
       .from(Notifications)
       .where(
@@ -51,7 +52,7 @@ export const getUnreadNotification = async (userId: number) => {
     return notification || [];
   } catch (error) {
     console.error("Error in getUnreadNotification", error);
-    return null;
+    return [];
   }
 };
 
@@ -96,7 +97,7 @@ export const getRewardTransaction = async (userId: number) => {
       date: transaction.date.toISOString().split("T")[0],
     }));
 
-    return formattedTransaction;
+    return transcations;
   } catch (error) {
     console.error("Error in getRewardTransaction", error);
     return null;
@@ -131,12 +132,11 @@ export const createReport = async (
     const [report] = await db
       .insert(Reports)
       .values({
-        // @ts-ignore
         userId,
         location,
         wasteType,
         amount,
-        imageUrl,
+        imageUrl: imageUrl || "",
         verificationResult,
         status: "pending",
       })
@@ -267,5 +267,97 @@ export const getAllReports = async (limit: number = 10) => {
   } catch (error) {
     console.error("Error in getAllReports", error);
     return [];
+  }
+};
+
+// for layout page
+
+export const getAvailableRewards = async (userId: number) => {
+  try {
+    const userTransaction = await getRewardTransaction(userId);
+
+    // Get user's total points
+    const userPoints =
+      userTransaction?.reduce((total, transaction) => {
+        return transaction.type.startsWith("earned")
+          ? total + transaction.amount
+          : total - transaction.amount;
+      }, 0) ?? 0;
+
+    // Get available rewards from the database
+    const dbRewards = await db
+      .select({
+        id: Rewards.id,
+        name: Rewards.name,
+        cost: Rewards.points,
+        description: Rewards.description,
+        collectionInfo: Rewards.collectionInfo,
+      })
+      .from(Rewards)
+      .where(eq(Rewards.isAvailable, true))
+      .execute();
+
+    // Combine user points and database rewards
+    const allRewards = [
+      {
+        id: 0, // Use a special ID for user's points
+        name: "Your Points",
+        cost: userPoints,
+        description: "Redeem your earned points",
+        collectionInfo: "Points earned from reporting and collecting waste",
+      },
+      ...dbRewards,
+    ];
+
+    return userPoints;
+  } catch (error) {
+    console.error("Error in getAvailableRewards", error);
+    return 0.0;
+  }
+};
+
+// for collect page
+export const getWasteCollectionTask = async (limit: number = 20) => {
+  try {
+    const wasteCollectionTask = await db
+      .select({
+        id: Reports.id,
+        location: Reports.location,
+        wasteType: Reports.wasteType,
+        amount: Reports.amount,
+        status: Reports.status,
+        date: Reports.createdAt,
+        collectorId: Reports.collectorId,
+      })
+      .from(Reports)
+      .limit(limit)
+      .execute();
+
+    return wasteCollectionTask && [];
+  } catch (error) {
+    console.error("Error in getWasteCollectionTask", error);
+    return [];
+  }
+};
+
+export const updateTaskStatus = async (
+  taskId: number,
+  newStatus: string,
+  userId: number
+) => {
+  try {
+    const [updatedTaskStatus] = await db
+      .update(Reports)
+      .set({
+        status: newStatus,
+      })
+      .where(eq(Reports.userId, userId))
+      .returning()
+      .execute();
+
+    return updatedTaskStatus;
+  } catch (error) {
+    console.error("Error in updateTaskStatus", error);
+    return null;
   }
 };

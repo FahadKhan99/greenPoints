@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 // for web3 auth (the baddest decision ever ig due to complexiticity)
 import { Web3Auth } from "@web3auth/modal";
@@ -30,6 +30,7 @@ import {
 import { Badge } from "./ui/badge";
 import {
   createUser,
+  getAvailableRewards,
   getUnreadNotification,
   getUserBalance,
   getUserByEmail,
@@ -68,10 +69,10 @@ const web3Auth = new Web3Auth({
 
 interface HeaderProps {
   onMenuClick: () => void;
-  totalEarning: number;
 }
 
-const Header = ({ onMenuClick, totalEarning }: HeaderProps) => {
+const Header = ({ onMenuClick }: HeaderProps) => {
+  const router = useRouter();
   const [provider, setProvider] = useState<IProvider | null>(null); // for the points mechanism (rewards)
   const [loggedIn, setLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -126,8 +127,12 @@ const Header = ({ onMenuClick, totalEarning }: HeaderProps) => {
           const unreadNotification = await getUnreadNotification(
             currentUser.id
           );
-          // @ts-ignore
-          setNotifications(unreadNotification);
+
+          if (unreadNotification) {
+            setNotifications(unreadNotification);
+          }
+
+          console.log("Notification: ", notifications);
         }
       }
     };
@@ -139,34 +144,59 @@ const Header = ({ onMenuClick, totalEarning }: HeaderProps) => {
   }, [userInfo]);
 
   // fetching user balance
-  useEffect(() => {
-    const fetchUserBalance = async () => {
-      if (userInfo && userInfo.email) {
-        const currentUser = await getUserByEmail(userInfo.email);
+  // useEffect(() => {
+  //   const fetchUserBalance = async () => {
+  //     if (userInfo && userInfo.email) {
+  //       const currentUser = await getUserByEmail(userInfo.email);
 
-        if (currentUser) {
-          const userBalance = await getUserBalance(currentUser.id);
-          setBalance(userBalance);
+  //       if (currentUser) {
+  //         const userBalance = await getUserBalance(currentUser.id);
+  //         setBalance(userBalance);
+  //       }
+  //     }
+  //   };
+
+  //   fetchUserBalance();
+
+  //   const handleBalanceUpdate = (event: CustomEvent) => {
+  //     setBalance(event.detail);
+  //   };
+
+  //   window.addEventListener(
+  //     "balanceUpdate",
+  //     handleBalanceUpdate as EventListener
+  //   );
+
+  //   return () =>
+  //     window.removeEventListener(
+  //       "balanceUpdate",
+  //       handleBalanceUpdate as EventListener
+  //     );
+  // }, [userInfo]);
+
+  // fetch total Earnings
+  useEffect(() => {
+    const fetchTotalEarning = async () => {
+      try {
+        const userEmail = localStorage.getItem("userEmail");
+
+        if (userEmail) {
+          const user = await getUserByEmail(userEmail);
+
+          if (user) {
+            const availableRewards = await getAvailableRewards(user.id);
+            setBalance(availableRewards);
+          }
         }
+      } catch (error) {
+        console.error("Error fetching total earnings", error);
       }
     };
+    fetchTotalEarning();
 
-    fetchUserBalance();
+    const notificationInterval = setInterval(fetchTotalEarning, 30000);
 
-    const handleBalanceUpdate = (event: CustomEvent) => {
-      setBalance(event.detail);
-    };
-
-    window.addEventListener(
-      "balanceUpdate",
-      handleBalanceUpdate as EventListener
-    );
-
-    return () =>
-      window.removeEventListener(
-        "balanceUpdate",
-        handleBalanceUpdate as EventListener
-      );
+    return () => clearInterval(notificationInterval);
   }, [userInfo]);
 
   // login using web3 auth
@@ -220,6 +250,9 @@ const Header = ({ onMenuClick, totalEarning }: HeaderProps) => {
 
       // remove the user from the localstorage
       localStorage.removeItem("userEmail");
+
+      // redirect to the home page
+      router.push("/");
     } catch (error) {
       console.error("Error in Loggin out (in Logout)", error);
     }
@@ -306,10 +339,10 @@ const Header = ({ onMenuClick, totalEarning }: HeaderProps) => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
               {notifications.length > 0 ? (
-                notifications.map((notification) => (
+                notifications.map((notification, index) => (
                   <DropdownMenuItem
-                    key={notification.id}
-                    onClick={() => handleNotificationClick(notification.id)}
+                    key={notification.id || index}
+                    onClick={() => handleNotificationClick(notification.id!)}
                   >
                     <div className="flex flex-col">
                       <span className="font-medium">{notification.type}</span>
