@@ -234,32 +234,26 @@ const ReportPage = () => {
     }
   };
 
-  // fetch the user info
+  // check user authentication fetch the user info
   useEffect(() => {
     const checkUser = async () => {
       const email = localStorage.getItem("userEmail");
 
-      // If email doesn't exist, redirect to the login page
-      if (!email) {
-        router.push("/login");
-        return;
-      }
+      if (email) {
+        let user = await getUserByEmail(email);
 
-      try {
-        const user = await getUserByEmail(email);
-        // If no user is found, throw an error or handle accordingly
-        if (!user) {
-          throw new Error("User not found");
-        }
+        if (!user) throw new Error("User doesn't exists");
+
         setUser(user);
 
-        const recentReports: Reports[] = await getAllReports(user.id);
+        const recentReports: Reports[] = await getAllReports();
+
         setReports(recentReports);
-      } catch (error) {
-        console.error("Error fetching user or reports:", error);
+      } else {
+        router.push("/");
       }
     };
-
+    
     checkUser();
   }, [router]);
 

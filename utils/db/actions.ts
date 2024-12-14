@@ -242,7 +242,7 @@ export const createNotification = async (
   }
 };
 
-export const getAllReports = async (userId: number) => {
+export const getAllReports = async (limit: number = 10) => {
   try {
     const reports = await db
       .select({
@@ -259,7 +259,8 @@ export const getAllReports = async (userId: number) => {
         updatedAt: Reports.updatedAt,
       })
       .from(Reports)
-      .where(eq(Reports.userId, userId))
+      .orderBy(desc(Reports.createdAt))
+      .limit(limit)
       .execute();
 
     return reports;

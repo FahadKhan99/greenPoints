@@ -96,7 +96,7 @@ const Header = ({ onMenuClick, totalEarning }: HeaderProps) => {
           setUserInfo(user as Users);
 
           if (user.email) {
-            localStorage.setItem("user", user.email);
+            localStorage.setItem("userEmail", user.email);
 
             // create the user in the db
             try {
@@ -185,7 +185,7 @@ const Header = ({ onMenuClick, totalEarning }: HeaderProps) => {
       const user = await web3Auth.getUserInfo();
 
       if (user.email) {
-        localStorage.setItem("user", user.email);
+        localStorage.setItem("userEmail", user.email);
         setUserInfo(user as Users);
 
         // create the user in the db
