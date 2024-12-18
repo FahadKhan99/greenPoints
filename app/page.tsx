@@ -1,17 +1,13 @@
-import {
-  ArrowRight,
-  Leaf,
-  MapPin,
-  Coins,
-  Users,
-  Recycle,
-  ChevronRight,
-} from "lucide-react";
+"use client";
+
+import { ArrowRight, Leaf, MapPin, Coins, Users, Recycle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import FeatureCard from "@/components/FeatureCard";
 import ImpactCard from "@/components/ImpactCard";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { getTotalPoints, getTotalReportCount } from "@/utils/db/actions";
 
 // Leaf animation (doing using divs like 4 divs)
 const AnimatedLeaf = () => {
@@ -27,6 +23,35 @@ const AnimatedLeaf = () => {
 };
 
 export default function Home() {
+  const router = useRouter();
+  const [totalPoints, setTotalPoints] = useState(0);
+  const [reportsCount, setReportsCount] = useState(0);
+
+  useEffect(() => {
+    const fetchTotalPoints = async () => {
+      try {
+        const currentPoints = await getTotalPoints();
+
+        setTotalPoints(currentPoints);
+      } catch (error) {
+        console.error("Error fetching total points", error);
+      }
+    };
+
+    const fetchReportsCount = async () => {
+      try {
+        const reportCount = await getTotalReportCount();
+
+        setReportsCount(reportCount);
+      } catch (error) {
+        console.error("Error fetching reports count", error);
+      }
+    };
+
+    fetchReportsCount();
+    fetchTotalPoints();
+  }, []);
+
   return (
     <div className="container mx-auto px-4 py-16">
       <section className="text-center mb-20">
@@ -38,8 +63,12 @@ export default function Home() {
           Join our community in making waste management more efficient and
           rewarding!
         </p>
-        <Button className="bg-green-600 hover:bg-green-700 text-white rounded-full text-lg px-10">
-          Report Waste
+        <Button
+          onClick={() => router.push("/report")}
+          className="bg-green-600 hover:bg-green-700 text-white rounded-full text-lg px-8"
+        >
+          <span>Report Waste</span>
+          <ArrowRight className="h-8 w-8" />
         </Button>
       </section>
 
@@ -68,8 +97,12 @@ export default function Home() {
 
         <div className="grid md:grid-cols-4 gap-6">
           <ImpactCard title="Waste Collected" value="350 kg" icon={Recycle} />
-          <ImpactCard title="Reports Submitted" value="4" icon={MapPin} />
-          <ImpactCard title="Points Earned" value="0" icon={Coins} />
+          <ImpactCard
+            title="Reports Submitted"
+            value={reportsCount}
+            icon={MapPin}
+          />
+          <ImpactCard title="Points Earned" value={totalPoints} icon={Coins} />
           <ImpactCard title="CO2 Offset" value="175 kg" icon={Leaf} />
         </div>
       </section>

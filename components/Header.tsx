@@ -30,9 +30,8 @@ import {
 import { Badge } from "./ui/badge";
 import {
   createUser,
-  getAvailableRewards,
+  getBalance,
   getUnreadNotification,
-  getUserBalance,
   getUserByEmail,
   markNotificationAsRead,
 } from "@/utils/db/actions";
@@ -184,7 +183,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
           const user = await getUserByEmail(userEmail);
 
           if (user) {
-            const availableRewards = await getAvailableRewards(user.id);
+            const availableRewards = await getBalance(user.id);
             setBalance(availableRewards);
           }
         }
@@ -325,46 +324,54 @@ const Header = ({ onMenuClick }: HeaderProps) => {
             </Button>
           )}
 
-          {/* for notification */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="mr-2 relative">
-                <Bell className="h-5 w-5 text-gray-800" />
-                {notifications.length > 0 && (
-                  <Badge className="absolute -top-1 px-1 -right-1 h-5 min-w-[1.2rem] rounded-full text-green-500 bg-white hover:bg-white hover:text-green-500">
-                    {notifications.length}
-                  </Badge>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
-              {notifications.length > 0 ? (
-                notifications.map((notification, index) => (
-                  <DropdownMenuItem
-                    key={notification.id || index}
-                    onClick={() => handleNotificationClick(notification.id!)}
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-medium">{notification.type}</span>
-                      <span className="text-sm text-gray-500">
-                        {notification.message}
-                      </span>
-                    </div>
-                  </DropdownMenuItem>
-                ))
-              ) : (
-                <DropdownMenuItem>No new notificatons</DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {loggedIn && (
+            <>
+              {/* for notification */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="mr-2 relative">
+                    <Bell className="h-5 w-5 text-gray-800" />
+                    {notifications.length > 0 && (
+                      <Badge className="absolute -top-1 px-1 -right-1 h-5 min-w-[1.2rem] rounded-full text-green-500 bg-white hover:bg-white hover:text-green-500">
+                        {notifications.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  {notifications.length > 0 ? (
+                    notifications.map((notification, index) => (
+                      <DropdownMenuItem
+                        key={index}
+                        onClick={() =>
+                          handleNotificationClick(notification.id!)
+                        }
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            {notification.type}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            {notification.message}
+                          </span>
+                        </div>
+                      </DropdownMenuItem>
+                    ))
+                  ) : (
+                    <DropdownMenuItem>No new notificatons</DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-          {/* for balance */}
-          <div className="bg-gray-100 flex items-center mr-2 md:mr-4 px-2 md:px-3 py-1 rounded-full ">
-            <Coins className="w-4 h-4 md:h-5 md:w-5 mr-1 md:mr-2 text-green-500" />
-            <span className="font-semibold text-sm md:text-base text-gray-800">
-              {balance.toFixed(2)}
-            </span>
-          </div>
+              {/* for balance */}
+              <div className="bg-gray-100 flex items-center mr-2 md:mr-4 px-2 md:px-3 py-1 rounded-full ">
+                <Coins className="w-4 h-4 md:h-5 md:w-5 mr-1 md:mr-2 text-green-500" />
+                <span className="font-semibold text-sm md:text-base text-gray-800">
+                  {balance.toFixed(2)}
+                </span>
+              </div>
+            </>
+          )}
 
           {!loggedIn ? (
             <Button

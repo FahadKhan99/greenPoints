@@ -1,14 +1,14 @@
 "use client"; // due to this i removed the metadata from here
 
 import { Inter } from "next/font/google";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 import "./globals.css";
 
-import { ErrorIcon, toast, Toaster } from "react-hot-toast";
+import { Toaster } from "react-hot-toast";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
-import { getAvailableRewards, getUserByEmail } from "@/utils/db/actions";
+import { metadata } from "./metadata";
 
 const inter = Inter({ subsets: ["latin"] });
 

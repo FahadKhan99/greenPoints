@@ -46,6 +46,7 @@ export const Rewards = pgTable("rewards", {
   isAvailable: boolean("is_available").notNull().default(true),
   description: text("description"),
   name: varchar("name", { length: 255 }).notNull(),
+  level: integer("level").notNull().default(1),
   collectionInfo: text("collection_info").notNull(),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),

@@ -15,6 +15,13 @@ import {
   Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "react-hot-toast";
 
@@ -23,19 +30,24 @@ import { Users } from "@/utils/types";
 import {
   getUserByEmail,
   getWasteCollectionTask,
+  saveCollectedWaste,
+  saveWasteCollectionReward,
   updateTaskStatus,
 } from "@/utils/db/actions";
 import { useRouter } from "next/navigation";
+import { formatDate } from "@/lib/helper";
+import StatusBadge from "@/components/StatusBadge";
 
 const geminiApiKey = process.env.GEMINI_API_KEY;
 
 type CollectionTask = {
   id: number;
+  userId: number;
   location: string;
   wasteType: string;
   amount: string;
   status: "pending" | "in_progress" | "completed" | "verified";
-  date: string;
+  date: Date;
   collectorId: number | null;
 };
 
@@ -46,7 +58,7 @@ function CollectPage() {
 
   const [tasks, setTasks] = useState<CollectionTask[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hoveredWasteType, setHoveredWasteType] = useState<string | null>(null);
+  const [hoveredWasteType, setHoveredWasteType] = useState<number | null>(-1);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [user, setUser] = useState<Users | null>(null);
@@ -79,13 +91,15 @@ function CollectPage() {
             setUser(user);
           }
         } else {
-          toast.error("You must be logged in to access this page.");
+          toast.error("You must be logged in to access Collect waste page.");
           router.push("/");
         }
 
         // fetch the task (user reported waste)
-        const fetchedTask = await getWasteCollectionTask();
+        const fetchedTask =
+          (await getWasteCollectionTask()) as CollectionTask[];
         setTasks(fetchedTask);
+        console.log("fetchedTask: ", fetchedTask);
       } catch (error) {
         console.error("Error fetching user and task", error);
         toast.error("Failed to load collection tasks. Please try again later.");
@@ -95,7 +109,7 @@ function CollectPage() {
     };
 
     fetchUserAndTask();
-  }, []);
+  }, [router]);
 
   const handleStatusChange = async (
     taskId: number,
@@ -103,6 +117,10 @@ function CollectPage() {
   ) => {
     if (!user) return;
     try {
+      // Debugging: Log current tasks and taskId
+      console.log("Current tasks:", tasks);
+      console.log("Task ID to update:", taskId);
+
       const updatedTask = await updateTaskStatus(taskId, newStatus, user?.id);
 
       if (updatedTask) {
@@ -184,9 +202,11 @@ function CollectPage() {
       const result = await model.generateContent([prompt, ...imageParts]);
       const response = await result.response;
       const text = response.text();
+      const cleanText = text.replace(/```json\n|```/g, ""); // idk why but this is how the data is received
 
       try {
-        const parsedResult = JSON.parse(text);
+        const parsedResult = JSON.parse(cleanText);
+        console.log(parsedResult);
         setVerificationResult({
           wasteTypeMatch: parsedResult.wasteTypeMatch,
           quantityMatch: parsedResult.quantityMatch,
@@ -204,10 +224,10 @@ function CollectPage() {
           const earnedReward = 20; // fix later
 
           // Save the reward
-          // await saveReward(user.id, earnedReward);
+          await saveWasteCollectionReward(user.id, earnedReward); // fix the error
 
           // Save the collected waste
-          // await saveCollectedWaste(selectedTask.id, user.id, parsedResult);
+          await saveCollectedWaste(selectedTask.id, user.id, parsedResult);
 
           setReward(earnedReward);
           toast.success(
@@ -247,7 +267,246 @@ function CollectPage() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  return <div>Collect Waste Page</div>;
+  return (
+    <div className="container p-4 sm:-6 lg:p-8 max-w-4xl mx-auto">
+      <h1 className="text-3xl font-semibold mb-6 text-gray-800">
+        Waste Collection Task
+      </h1>
+
+      <div className="mb-4 flex items-center">
+        <Input
+          type="text"
+          placeholder="Search by area..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="mr-2"
+        />
+        <Button variant="outline" size="icon">
+          <Search className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <Loader className="animate-spin h-8 w-8 text-gray-500" />
+        </div>
+      ) : (
+        <>
+          <div className="space-y-4">
+            {paginatedTasks.map((task) => (
+              <div
+                key={task.id}
+                className="bg-white p-4 rounded-lg shadow-sm border border-gray-200"
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <h2 className="text-lg font-medium text-gray-800 flex items-center">
+                    <MapPin className="w-5 h-5 mr-2 text-gray-500" />
+                    {task.location}
+                  </h2>
+                  <StatusBadge status={task.status} />
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-sm text-gray-600 mb-3">
+                  <div className="flex items-center relative">
+                    <Trash2 className="w-4 h-4 mr-2 text-gray-500" />
+                    <span
+                      onMouseEnter={() => setHoveredWasteType(task.id)}
+                      onMouseLeave={() => setHoveredWasteType(-1)}
+                      className="cursor-pointer"
+                    >
+                      {task.wasteType.length > 8
+                        ? `${task.wasteType.slice(0, 8)}...`
+                        : task.wasteType}
+                    </span>
+                    {/* if you hover then you will see the full wastetype */}
+                    {hoveredWasteType === task.id && (
+                      <div className="absolute left-0 top-full mt-1 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
+                        {task.wasteType}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center">
+                    <Weight className="w-4 h-4 mr-2 text-gray-500" />
+                    {task.amount}
+                  </div>
+
+                  <div className="flex items-center">
+                    <Calendar className="w-4 h-4 mr-2 text-gray-500" />
+                    {formatDate(task.date)}
+                  </div>
+                </div>
+
+                {/* check if the user is not the one who reported the waste */}
+
+                <div className="flex justify-end">
+                  {task.userId !== user?.id && task.status === "pending" && (
+                    <Button
+                      onClick={() => handleStatusChange(task.id, "in_progress")}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Start Collection
+                    </Button>
+                  )}
+                  {task.userId !== user?.id && task.status === "in_progress" &&
+                    task.collectorId === user?.id && (
+                      <Button
+                        onClick={() => setSelectedTask(task)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        Complete & Verify
+                      </Button>
+                    )}
+                  {task.status === "in_progress" &&
+                    task.collectorId !== user?.id && (
+                      <span className="text-yellow-600 text-sm font-medium">
+                        In progress by another collector
+                      </span>
+                    )}
+                  {task.status === "verified" && (
+                    <span className="text-green-600 text-sm font-medium">
+                      Reward Earned
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* for Pagination */}
+          <div className="mt-4 flex justify-center">
+            <Button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="mr-2"
+            >
+              Previous
+            </Button>
+            <span className="mx-2 self-center">
+              Page {currentPage} of {pageCount}
+            </span>
+            <Button
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, pageCount))
+              }
+              disabled={currentPage === pageCount}
+              className="ml-2"
+            >
+              Next
+            </Button>
+          </div>
+        </>
+      )}
+
+      {/* if ... then show a modal */}
+      {selectedTask && (
+        <Dialog open={true} onOpenChange={() => setSelectedTask(null)}>
+          <DialogContent className="w-4/5 max-w-[800px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Verify Collection</DialogTitle>
+              <DialogDescription>
+                Upload a photo of the collected waste to verify and earn your
+                reward.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mb-4">
+              <label
+                htmlFor="verification-image"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Upload Image
+              </label>
+              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                <div className="space-y-1 text-center">
+                  <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                  <div className="flex text-sm text-gray-600">
+                    <label
+                      htmlFor="verification-image"
+                      className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                    >
+                      <span>Upload a file</span>
+                      <input
+                        id="verification-image"
+                        name="verification-image"
+                        type="file"
+                        className="sr-only"
+                        onChange={handleImageUpload}
+                        accept="image/*"
+                      />
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    PNG, JPG, GIF up to 10MB
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* if image show preview */}
+            {verificationImage && (
+              <img
+                src={verificationImage}
+                alt="Verification"
+                className="mb-4 rounded-md w-full"
+              />
+            )}
+
+            <Button
+              onClick={handleVerify}
+              className="w-full"
+              disabled={
+                !verificationImage || verificationStatus === "verifying"
+              }
+            >
+              {verificationStatus === "verifying" ? (
+                <>
+                  <Loader className="animate-spin -ml-1 mr-3 h-5 w-5" />
+                  Verifying...
+                </>
+              ) : (
+                "Verify Collection"
+              )}
+            </Button>
+
+            {/* to display the result from the gemini */}
+            {verificationStatus === "success" && verificationResult && (
+              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
+                <p>
+                  Waste Type Match:{" "}
+                  {verificationResult.wasteTypeMatch ? "Yes" : "No"}
+                </p>
+                <p>
+                  Quantity Match:{" "}
+                  {verificationResult.quantityMatch ? "Yes" : "No"}
+                </p>
+                <p>
+                  Confidence: {(verificationResult.confidence * 100).toFixed(2)}
+                  %
+                </p>
+              </div>
+            )}
+
+            {verificationStatus === "failure" && (
+              <p className="mt-2 text-red-600 text-center text-sm">
+                Verification failed. Please try again.
+              </p>
+            )}
+
+            <Button
+              onClick={() => setSelectedTask(null)}
+              variant="outline"
+              className="w-full mt-2"
+            >
+              Close
+            </Button>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
 }
 
 export default CollectPage;

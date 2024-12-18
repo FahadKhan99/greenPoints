@@ -25,7 +25,6 @@ import {
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -256,10 +255,11 @@ const ReportPage = () => {
         setUser(user);
 
         const recentReports: Reports[] = await getAllReports();
+        console.log(recentReports);
 
         setReports(recentReports);
       } else {
-        toast.error("You must be logged in to access this page.");
+        toast.error("You must be logged in to access Report waste page.");
         router.push("/");
       }
     };

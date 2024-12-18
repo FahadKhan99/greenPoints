@@ -28,6 +28,7 @@ export type Rewards = {
   points: number;
   isAvailable: boolean;
   description: string | null;
+  level: number;
   name: string;
   collectorInfo: string;
 

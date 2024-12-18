@@ -8,7 +8,7 @@ const sidebarItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/report", label: "Report Waste", icon: MapPin },
   { href: "/collect", label: "Collect Waste", icon: Trash },
-  { href: "/reward", label: "Rewards", icon: Coins },
+  { href: "/rewards", label: "Rewards", icon: Coins },
   { href: "/leaderboard", label: "Leaderboard", icon: Medal },
 ];
 
